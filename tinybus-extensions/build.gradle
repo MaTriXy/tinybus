@@ -1,30 +1,16 @@
-apply plugin: 'android-library'
+// apply from: '../gradle-mvn-push.gradle'
+apply plugin: 'com.android.library'
+
+android {
+	compileSdkVersion 21
+	buildToolsVersion '22.0.1'
+
+	defaultConfig {
+		minSdkVersion 14
+		targetSdkVersion 21
+	}
+}
 
 dependencies {
     compile project(':tinybus')
-}
-
-android {
-	compileSdkVersion 'android-20'
-	buildToolsVersion '21.1'
-
-	defaultConfig {
-		minSdkVersion 10
-		targetSdkVersion 21
-	}
-
-	sourceSets {
-		main {
-			manifest.srcFile 'AndroidManifest.xml'
-			java.srcDirs = ['src']
-		}
-	}
-
-	lintOptions {
-		quiet true
-		abortOnError false
-		ignoreWarnings true
-		checkAllWarnings false
-		warningsAsErrors false
-	}
 }

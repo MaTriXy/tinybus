@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="de.halfbit.tinybus"
+    android:versionCode="301"
+    android:versionName="3.0.1" >
+
+    <application />
+
+</manifest>

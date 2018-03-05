@@ -1,80 +1,67 @@
 ![tinybus][1]
 
+TinyBus is the faster implementation of [Otto][2] event bus with additional features you missed.
+
+[![Build Status](https://travis-ci.org/beworker/tinybus.svg?branch=master)](https://travis-ci.org/beworker/tinybus)
+
 TinyBus is
 =======
+ - tiny (~ 26K jar)
  - fast (optimized for startup and event dispatching)
- - tiny (~ 17K jar)
- - well tested (> 50 junit tests)
- - annotation based (no requiremens to method names, no interfaces to implement)
+ - well tested (> 90 junit tests)
+ - annotation based (no requirements on method names, no interfaces to implement)
 
-Performance comparison tests
+TinyBus API in a nutshell
 =======
-![tinybus][3]
-
-Executed on Galaxy Nexus device with Android 4.3 (Dalvik) with switched off screen.
-
-TinyBus quick start
-=======
-
-```java
-// 1. Create event
-public class LoadingEvent {
-   // some fields if needed
-}
-   
-// 2. Prepare event subscriber (Activity, Fragment or any other component)
-@Subscribe
-public void onEvent(LoadingEvent event) {
-    // event handler logic
-}
-bus.register(this);
-   
-// 3. post event
-bus.post(new LoadingEvent());
-```
+ - `@Subscribe` annotates event handler methods running in the main thread.
+ - `@Subscribe(mode=Mode.Background)` annotates event handler methods running in a background thread.
+ - `@Subscribe(mode=Mode.Background, queue="web")` annotates event handler methods running in a serialized background queue with given name. You can have as many queues as you want.
+ - `@Produce` annotates methods returning most recent events (aka sticky events).
+ - `Bus.register(Object)` and `Bus.unregister(Object)` register and unregister objects with annotated subscriber and producer methods.
+ - `Bus.hasRegistered(Object)` checks, whether given object is already registered.
+ - `Bus.post(Object)` posts given event object to all registered subscribers.
+ - `Bus.postDelayed(Object, long)` and `Bus.cancelDelayed(Class)` schedules single event delivery for later in time and cancels it.
 
 For a more detailed example check out [Getting started][4] step-by-step guide or example application.
 
-TinyBus helps
+Performance reference tests
 =======
- - to remove unneccessary interfaces and direct component dependencies
- - to simplify communication between Activities, Fragments and Services
- - to simplify events exchange between background and Main Thread
- - to simplify consumption of standard system events (like Battery Level, Connection State etc.)
+![tinybus][3]
 
-Event dispatching
-=======
+Executed on Nexus 5 device (Android 5.0.1, ART, screen off).
 
-By default, TinyBus dispatches events to all registered subscribers sequentially in Main Thread. If ```post()``` method is called in Main Thread, then subscribers are called directly. If ```post()``` method is called in a background thread, then TinyBus reroutes and dispatches events through Main Thread.
-
- * If another event gets posted while handling current event in a subscriber, then the bus completes dispatching of current event first, and then dispatches the new event.
- * TinyBus does *not* dispatch ```null``` events coming from a producer method. Such values are silently ignored.
-
-If a subscriber is annotated with ```@Subscribe(Mode.Background)```, then TinyBus notifies it in a background thread. There is a signe background thread for all possible bus instances. So if that thread is blocked, then all new background events will be queued for further processing.
-
-TinyBus extensions
+TinyBus extensions (still in 'β')
 =======
 
-With TinyBus extensions you can easily subscribe to commonly used events like battery level, connectivity or even phone shake event. Here is a short example.
+Extensions is a unique feature of TinyBus. With it you can easily subscribe to commonly used events like battery level, connectivity change, phone shake event or even standard Android broadcast Intents. Here is a short example.
 
 ```java
 public class MainActivity extends Activity {
-    private Bus mBus;
+    private TinyBus mBus;
         
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        // get bus instance and wire device shake event
-        mBus = TinyBus.from(this).wire(new ShakeEventWire());
+        // get bus instance 
+        mBus = TinyBus.from(this)
+        
+        if (savedInstanceState == null) {
+            // Note: ShakeEventWire stays wired when activity is re-created
+            //       on configuration change. That's why we register is 
+            //       only once inside if-statement.
+
+            // wire device shake event provider
+            mBus.wire(new ShakeEventWire());
+        }
     }
     
     @Override
     protected void onStart() {
         super.onStart();
-	        mBus.register(this);
-	   }
+	    mBus.register(this);
+	}
 	
     @Override
     protected void onStop() {
@@ -88,54 +75,47 @@ public class MainActivity extends Activity {
     }
 }
 ```
-See example application for more details.
+More detailed usage example can be found in example application.
 
-
-Differences to Otto event bus
+Gradle dependencies
 =======
 
-TinyBus adopts interfaces defined in [Otto project][2]. At the same time TinyBus is not a direct fork of Otto. It has different implementation written from scratch with a slightly different behavior. The main difference from Otto is that TinyBus is optimized for startup and event dispatching performance.
-
- * TinyBus's ```post()``` method can be called from any thread.
- * TinyBus can dispatch events into a background thread.
- * TinyBus does not analyse event's class hierarhy. It dispatches events to subscribers listening for exaclty same event type.
- * TinyBus is much faster.
-
-Build with Ant
-=======
-
-1. git clone git@github.com:beworker/tinybus.git
-2. cd <git>/tinybus
-3. ant release
-
-Build with Gradle
-=======
-
-1. git clone git@github.com:beworker/tinybus.git
-2. cd <git>/tinybus
-3. gradle build
-
-How to execute JUnit tests
-=======
-
-1. cd <git>/tinybus-tests
-2. ant test
-
-Proguard configuration
-=======
-
+For pure event bus implementation
 ```
--keepclassmembers class ** {
-    @com.halfbit.tinybus.Subscribe public *;
-    @com.halfbit.tinybus.Produce public *;
+dependencies {
+    compile 'de.halfbit:tinybus:3.0.2'
+}
+```
+For event bus with extensions
+```
+dependencies {
+    compile 'de.halfbit:tinybus:3.0.2'
+    compile 'de.halfbit:tinybus-extensions:3.0.2'
 }
 ```
 
-[![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=beworker&url=https://github.com/beworker/tinybus&title=tinybus&language=java&tags=github&category=software)
+ProGuard configuration
+=======
+
+If you use Gradle build, then you don't need to configure anything, because it will use proper configuration already delivered with Android library archive. Otherwise you can use the configuration below:
+```
+-keepclassmembers, allowobfuscation class ** {
+    @de.halfbit.tinybus.Subscribe public *;
+    @de.halfbit.tinybus.Produce public *;
+}
+```
+
+Used by
+=======
+
+ - [franco.Kernel updater][6]
+ - [Settings Extended][5]
+ - [Focus][7]
+
 License
 =======
 
-    Copyright (c) 2014 Sergej Shafarenka, halfbit.de
+    Copyright (c) 2014-2015 Sergej Shafarenka, halfbit.de
     Copyright (C) 2012 Square, Inc.
     Copyright (C) 2007 The Guava Authors
     
@@ -156,3 +136,6 @@ License
 [2]: https://github.com/square/otto
 [3]: web/performance.png
 [4]: https://github.com/beworker/tinybus/wiki/Getting-Started
+[5]: https://play.google.com/store/apps/details?id=com.hb.settings
+[6]: https://play.google.com/store/apps/details?id=com.franco.kernel
+[7]: https://play.google.com/store/apps/details?id=com.franco.focus
